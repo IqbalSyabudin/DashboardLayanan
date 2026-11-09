@@ -1,0 +1,24 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Go
+backend/vendor/
+backend/*.exe
+backend/*.test
+backend/*.out
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
