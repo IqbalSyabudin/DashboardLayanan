@@ -25,6 +25,7 @@ import {
 import Topbar from "../components/Topbar";
 import Breadcrumb from "../components/Breadcrumb";
 import Pagination from "../components/Pagination";
+import RedSelect from "../components/RedSelect";
 
 import {
   apiRequest,
@@ -333,11 +334,11 @@ export default function Dinas() {
   // ==========================================================
 
   function handleWilayah(
-    e
+    value
   ) {
 
     setWilayah(
-      e.target.value
+      value
     );
 
     setPagination(
@@ -353,11 +354,11 @@ export default function Dinas() {
   // ==========================================================
 
   function handleStatus(
-    e
+    value
   ) {
 
     setStatus(
-      e.target.value
+      value
     );
 
     setPagination(
@@ -650,7 +651,6 @@ export default function Dinas() {
             >
 
               <div>
-
                 <h2
                   className="
                     text-sm
@@ -660,17 +660,6 @@ export default function Dinas() {
                 >
                   Daftar Dinas / Instansi
                 </h2>
-
-                <p
-                  className="
-                    mt-1
-                    text-xs
-                    text-slate-400
-                  "
-                >
-                  Data langsung dari tabel instansi.
-                </p>
-
               </div>
 
               <Link
@@ -772,88 +761,29 @@ export default function Dinas() {
 
             {/* WILAYAH */}
 
-            <select
-              value={
-                wilayah
-              }
-              onChange={
-                handleWilayah
-              }
-              className="
-                rounded-lg
-                border
-                border-slate-300
-                bg-slate-50
-                px-3
-                py-2
-                text-xs
-                font-medium
-                text-slate-700
-                outline-none
-              "
-            >
-
-              <option value="">
-                Semua Wilayah
-              </option>
-
-              {wilayahList.map(
-                (item) => (
-
-                  <option
-                    key={
-                      item.id
-                    }
-                    value={
-                      item.id
-                    }
-                  >
-                    {
-                      item.nama
-                    }
-                  </option>
-
-                )
-              )}
-
-            </select>
+            <RedSelect
+              value={wilayah}
+              onChange={handleWilayah}
+              options={[
+                { value: "", label: "Semua Wilayah" },
+                ...wilayahList.map((item) => ({
+                  value: String(item.id),
+                  label: item.nama,
+                })),
+              ]}
+            />
 
             {/* STATUS */}
 
-            <select
-              value={
-                status
-              }
-              onChange={
-                handleStatus
-              }
-              className="
-                rounded-lg
-                border
-                border-slate-300
-                bg-slate-50
-                px-3
-                py-2
-                text-xs
-                font-medium
-                text-slate-700
-                outline-none
-              "
-            >
-
-              <option value="">
-                Semua Status
-              </option>
-
-              <option value="Aktif">
-                Aktif
-              </option>
-
-              <option value="Nonaktif">
-                Nonaktif
-              </option>
-
-            </select>
+            <RedSelect
+              value={status}
+              onChange={handleStatus}
+              options={[
+                { value: "", label: "Semua Status" },
+                { value: "Aktif", label: "Aktif" },
+                { value: "Nonaktif", label: "Nonaktif" },
+              ]}
+            />
 
           </div>
 
@@ -864,15 +794,11 @@ export default function Dinas() {
           {loading ? (
 
             <div
-              className="
-                px-6
-                py-14
-                text-center
-                text-xs
-                text-slate-400
-              "
+              className="flex items-center justify-center px-6 py-14"
+              role="status"
+              aria-label="Memuat data"
             >
-              Memuat data instansi...
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-200 border-t-red-600" />
             </div>
 
           ) : (

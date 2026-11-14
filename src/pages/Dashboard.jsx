@@ -1,13 +1,11 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Building,
   Building2,
   Layers,
   CheckCircle2,
   RefreshCw,
   ShieldCheck,
-  Landmark,
-  Globe,
   ChevronDown,
   Search,
   FilePlus,
@@ -17,6 +15,7 @@ import StatCard from "../components/StatCard";
 import LayananTable from "../components/LayananTable";
 import { LAYANAN } from "../data/layanan";
 import ServiceRegionChart from "../components/ServiceRegionChart";
+import RedSelect from "../components/RedSelect";
 
 const STATS = [
   { icon: Building2, iconBg: "bg-blue-100", iconColor: "text-blue-600", label: "Total Dinas", value: 132, helper: "Dinas terdaftar" },
@@ -24,16 +23,6 @@ const STATS = [
   { icon: CheckCircle2, iconBg: "bg-green-100", iconColor: "text-green-600", label: "Layanan Aktif", value: 312, helper: { stat: "72,9%", text: "dari total" }, helperColor: "text-green-700" },
   { icon: RefreshCw, iconBg: "bg-orange-100", iconColor: "text-orange-600", label: "Perlu Pembaruan", value: 78, helper: { stat: "18,2%", text: "dari total" }, helperColor: "text-orange-600" },
   { icon: ShieldCheck, iconBg: "bg-violet-100", iconColor: "text-violet-600", label: "Status Terverifikasi", value: 286, helper: { stat: "66,8%", text: "dari total" }, helperColor: "text-violet-600" },
-];
-
-const REGIONS = [
-  { label: "Kota Yogyakarta", type: "Kota", icon: Building2 },
-  { label: "Kab. Sleman", type: "Kabupaten", icon: Building },
-  { label: "Kab. Bantul", type: "Kabupaten", icon: Building },
-  { label: "Kab. Kulon Progo", type: "Kabupaten", icon: Building },
-  { label: "Kab. Gunungkidul", type: "Kabupaten", icon: Building },
-  { label: "Provinsi DIY", type: "Provinsi", icon: Landmark },
-  { label: "Pusat", type: "Pusat", icon: Globe },
 ];
 
 const ACTIVITIES = [
@@ -44,7 +33,30 @@ const ACTIVITIES = [
   { color: "bg-red-600", icon: CheckCircle2, text: 'Layanan "Informasi Lingkungan" tidak aktif', time: "18 Mei 2025, 11:20 WIB" },
 ];
 
+const STATUS_OPTIONS = [
+  { value: "", label: "Semua Status" },
+  { value: "Aktif", label: "Aktif" },
+  { value: "Perlu Update", label: "Perlu Update" },
+  { value: "Non aktif", label: "Non aktif" },
+];
+
+const WILAYAH_OPTIONS = [
+  { value: "", label: "Semua Wilayah" },
+  ...[...new Set(LAYANAN.map((l) => l.wilayah))].map((w) => ({ value: w, label: w })),
+];
+
 export default function Dashboard() {
+  const [wilayah, setWilayah] = useState("");
+  const [status, setStatus] = useState("");
+
+  const filtered = useMemo(
+    () =>
+      LAYANAN.filter(
+        (l) => (!wilayah || l.wilayah === wilayah) && (!status || l.status === status)
+      ),
+    [wilayah, status]
+  );
+
   return (
     <>
       <Topbar title="Dashboard" subtitle="Layanan Informasi Publik" />
@@ -56,33 +68,6 @@ export default function Dashboard() {
             <StatCard key={s.label} {...s} />
           ))}
         </div>
-
-        {/* Region hierarchy */}
-        <section>
-          <p className="text-xs font-bold text-slate-700 mb-2.5">
-            Cakupan Wilayah (Hierarki Pemerintahan)
-          </p>
-          <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-              {REGIONS.map(({ label, type, icon: Icon }) => (
-                <div
-                  key={label}
-                  className="flex items-center gap-2.5 rounded-lg border border-slate-200/80 bg-white px-3 py-2.5 hover:border-slate-300 transition-colors"
-                >
-                  <Icon size={18} strokeWidth={1.8} className="text-red-600 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[11.5px] font-bold text-slate-800 truncate leading-tight">
-                      {label}
-                    </p>
-                    <p className="text-[10px] text-slate-400 truncate mt-0.5 leading-tight">
-                      {type}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
         {/* Main grid: table + side panels */}
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 items-start">
@@ -99,12 +84,8 @@ export default function Dashboard() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <button className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700">
-                Semua Wilayah <ChevronDown size={12} />
-              </button>
-              <button className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700">
-                Semua Status <ChevronDown size={12} />
-              </button>
+              <RedSelect value={wilayah} onChange={setWilayah} options={WILAYAH_OPTIONS} />
+              <RedSelect value={status} onChange={setStatus} options={STATUS_OPTIONS} />
               <label className="relative flex-1 min-w-[180px]">
                 <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -115,7 +96,7 @@ export default function Dashboard() {
               </label>
             </div>
 
-            <LayananTable data={LAYANAN} pageSize={6} />
+            <LayananTable key={`${wilayah}|${status}`} data={filtered} pageSize={6} />
           </div>
 
           {/* Side panels */}

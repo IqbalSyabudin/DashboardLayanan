@@ -541,7 +541,6 @@ export default function KataKunci() {
           >
 
             <div>
-
               <h2
                 className="
                   text-sm
@@ -551,17 +550,6 @@ export default function KataKunci() {
               >
                 Daftar Kata Kunci
               </h2>
-
-              <p
-                className="
-                  mt-1
-                  text-xs
-                  text-slate-400
-                "
-              >
-                Data berasal langsung dari tabel layanan_keyword.
-              </p>
-
             </div>
 
             <div
@@ -700,15 +688,11 @@ export default function KataKunci() {
           {loading ? (
 
             <div
-              className="
-                px-6
-                py-14
-                text-center
-                text-xs
-                text-slate-400
-              "
+              className="flex items-center justify-center px-6 py-14"
+              role="status"
+              aria-label="Memuat data"
             >
-              Memuat data kata kunci...
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-200 border-t-red-600" />
             </div>
 
           ) : (

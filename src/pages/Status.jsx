@@ -16,6 +16,7 @@ import {
 import Topbar from "../components/Topbar";
 import Breadcrumb from "../components/Breadcrumb";
 import Pagination from "../components/Pagination";
+import RedSelect from "../components/RedSelect";
 
 import {
   apiRequest,
@@ -274,11 +275,11 @@ export default function Status() {
   // ==========================================================
 
   function handleStatus(
-    e
+    value
   ) {
 
     setStatus(
-      e.target.value
+      value
     );
 
     setPagination(
@@ -824,52 +825,18 @@ export default function Status() {
 
             {/* STATUS */}
 
-            <select
-              value={
-                status
-              }
-              onChange={
-                handleStatus
-              }
-              className="
-                rounded-lg
-                border
-                border-slate-300
-                bg-slate-50
-                px-3
-                py-2
-                text-xs
-                font-medium
-                text-slate-700
-                outline-none
-              "
-            >
-
-              <option value="">
-                Semua Status
-              </option>
-
-              <option value="VERIFIED">
-                VERIFIED
-              </option>
-
-              <option value="NEED_REVIEW">
-                NEED_REVIEW
-              </option>
-
-              <option value="READY_RAG">
-                READY_RAG
-              </option>
-
-              <option value="CLEANED">
-                CLEANED
-              </option>
-
-              <option value="RAW">
-                RAW
-              </option>
-
-            </select>
+            <RedSelect
+              value={status}
+              onChange={handleStatus}
+              options={[
+                { value: "", label: "Semua Status" },
+                { value: "VERIFIED", label: "VERIFIED" },
+                { value: "NEED_REVIEW", label: "NEED_REVIEW" },
+                { value: "READY_RAG", label: "READY_RAG" },
+                { value: "CLEANED", label: "CLEANED" },
+                { value: "RAW", label: "RAW" },
+              ]}
+            />
 
           </div>
 
@@ -880,15 +847,11 @@ export default function Status() {
           {loading ? (
 
             <div
-              className="
-                px-6
-                py-14
-                text-center
-                text-xs
-                text-slate-400
-              "
+              className="flex items-center justify-center px-6 py-14"
+              role="status"
+              aria-label="Memuat data"
             >
-              Memuat data status...
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-200 border-t-red-600" />
             </div>
 
           ) : (
@@ -1332,7 +1295,6 @@ export default function Status() {
             >
 
               <div>
-
                 <h2
                   className="
                     text-sm
@@ -1342,17 +1304,6 @@ export default function Status() {
                 >
                   Detail Status Layanan
                 </h2>
-
-                <p
-                  className="
-                    mt-0.5
-                    text-[11px]
-                    text-slate-400
-                  "
-                >
-                  Data dari layanan_status
-                </p>
-
               </div>
 
               <button
