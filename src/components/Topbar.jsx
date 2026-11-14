@@ -16,7 +16,6 @@ import {
   Bell,
   ChevronDown,
   LogOut,
-  User,
 } from "lucide-react";
 
 // ============================================================
@@ -630,45 +629,6 @@ export default function Topbar({
                   border-slate-100
                 "
               />
-
-              {/* PROFILE */}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setUserMenuOpen(
-                    false
-                  );
-
-                  navigate(
-                    "/pengguna"
-                  );
-                }}
-                className="
-                  flex
-                  w-full
-                  items-center
-                  gap-3
-                  rounded-lg
-                  px-3
-                  py-2.5
-                  text-left
-                  text-xs
-                  text-slate-600
-                  hover:bg-slate-50
-                "
-              >
-
-                <User
-                  size={15}
-                  className="
-                    text-slate-400
-                  "
-                />
-
-                Profil
-
-              </button>
 
               {/* LOGOUT */}
 
