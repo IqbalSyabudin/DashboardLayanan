@@ -9,6 +9,8 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import RedSelect from "../components/RedSelect";
+
 import {
   Plus,
   Search,
@@ -518,11 +520,8 @@ export default function DataLayanan() {
   // ==========================================================
 
   function handleWilayahChange(
-    e
+    value
   ) {
-
-    const value =
-      e.target.value;
 
     setWilayah(
       value
@@ -536,11 +535,8 @@ export default function DataLayanan() {
   // ==========================================================
 
   function handleStatusChange(
-    e
+    value
   ) {
-
-    const value =
-      e.target.value;
 
     setStatus(
       value
@@ -729,7 +725,6 @@ export default function DataLayanan() {
           >
 
             <div>
-
               <h2
                 className="
                   text-sm
@@ -739,16 +734,6 @@ export default function DataLayanan() {
               >
                 Daftar Layanan Informasi Publik
               </h2>
-
-              <p
-                className="
-                  text-xs
-                  text-slate-400
-                "
-              >
-                Data diambil langsung dari backend Golang.
-              </p>
-
             </div>
 
             {/* TAMBAH */}
@@ -795,86 +780,30 @@ export default function DataLayanan() {
 
             {/* WILAYAH */}
 
-            <select
+            <RedSelect
               value={wilayah}
-              onChange={
-                handleWilayahChange
-              }
-              className="
-                rounded-lg
-                border
-                border-slate-300
-                bg-slate-50
-                px-3
-                py-2
-                text-xs
-                font-medium
-                text-slate-700
-                focus:outline-none
-                focus:ring-2
-                focus:ring-brand-400
-              "
-            >
-
-              <option value="">
-                Semua Wilayah
-              </option>
-
-              {wilayahList.map(
-                (item) => (
-
-                  <option
-                    key={item.id}
-                    value={item.nama}
-                  >
-                    {item.nama}
-                  </option>
-
-                )
-              )}
-
-            </select>
+              onChange={handleWilayahChange}
+              options={[
+                { value: "", label: "Semua Wilayah" },
+                ...wilayahList.map((item) => ({
+                  value: item.nama,
+                  label: item.nama,
+                })),
+              ]}
+            />
 
             {/* STATUS */}
 
-            <select
+            <RedSelect
               value={status}
-              onChange={
-                handleStatusChange
-              }
-              className="
-                rounded-lg
-                border
-                border-slate-300
-                bg-slate-50
-                px-3
-                py-2
-                text-xs
-                font-medium
-                text-slate-700
-                focus:outline-none
-                focus:ring-2
-                focus:ring-brand-400
-              "
-            >
-
-              <option value="">
-                Semua Status
-              </option>
-
-              <option value="Aktif">
-                Aktif
-              </option>
-
-              <option value="Perlu Update">
-                Perlu Update
-              </option>
-
-              <option value="Non aktif">
-                Non aktif
-              </option>
-
-            </select>
+              onChange={handleStatusChange}
+              options={[
+                { value: "", label: "Semua Status" },
+                { value: "Aktif", label: "Aktif" },
+                { value: "Perlu Update", label: "Perlu Update" },
+                { value: "Non aktif", label: "Non aktif" },
+              ]}
+            />
 
             {/* SEARCH HALAMAN */}
 
@@ -961,14 +890,11 @@ export default function DataLayanan() {
           {loading ? (
 
             <div
-              className="
-                py-12
-                text-center
-                text-xs
-                text-slate-400
-              "
+              className="flex items-center justify-center py-12"
+              role="status"
+              aria-label="Memuat data"
             >
-              Memuat data layanan dari backend...
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-200 border-t-red-600" />
             </div>
 
           ) : (
