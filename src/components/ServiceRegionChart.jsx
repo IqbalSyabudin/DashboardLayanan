@@ -1,66 +1,188 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-// Representative sample data (the source Figma file only exported this chart as a
-// flattened SVG path, so exact underlying values weren't recoverable) — swap in
-// real numbers from your API once available.
-const DATA = [
-  { wilayah: "Provinsi DIY", Aktif: 180, "Perlu Update": 40, Offline: 15, Draft: 8 },
-  { wilayah: "Kota Yogyakarta", Aktif: 150, "Perlu Update": 35, Offline: 12, Draft: 6 },
-  { wilayah: "Sleman", Aktif: 120, "Perlu Update": 30, Offline: 10, Draft: 5 },
-  { wilayah: "Bantul", Aktif: 95, "Perlu Update": 25, Offline: 8, Draft: 4 },
-  { wilayah: "Kulon Progo", Aktif: 80, "Perlu Update": 20, Offline: 6, Draft: 3 },
-  { wilayah: "Gunungkidul", Aktif: 65, "Perlu Update": 18, Offline: 5, Draft: 2 },
-  { wilayah: "Pusat", Aktif: 60, "Perlu Update": 15, Offline: 4, Draft: 2 },
-];
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
-const SERIES = [
-  { key: "Aktif", color: "#16a34a" },
-  { key: "Perlu Update", color: "#ea580c" },
-  { key: "Offline", color: "#dc2626" },
-  { key: "Draft", color: "#cbd5e1" },
-];
+// ============================================================
+// CHART STATISTIK WILAYAH
+// ============================================================
 
-export default function ServiceRegionChart() {
-  return (
-    <div>
-      <div className="flex items-center gap-3 mb-2">
-        {SERIES.map((s) => (
-          <span key={s.key} className="flex items-center gap-1 text-[10px] text-slate-500">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: s.color }} />
-            {s.key}
-          </span>
-        ))}
+export default function ServiceRegionChart({
+  data = [],
+}) {
+
+  if (!data.length) {
+
+    return (
+      <div className="
+        flex
+        h-[190px]
+        items-center
+        justify-center
+        text-xs
+        text-slate-400
+      ">
+        Data wilayah belum tersedia.
       </div>
-      <div className="h-[190px] -ml-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={DATA} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="#e2e8f0" />
+    );
+
+  }
+
+  const chartData = data.map((item) => ({
+    wilayah: item.code,
+    Aktif: item.aktif,
+    "Perlu Update": item.update,
+    "Kendala Lainnya": item.nonaktif,
+  }));
+
+  return (
+
+    <div>
+
+      {/* LEGEND */}
+
+      <div className="
+        mb-3
+        flex
+        flex-wrap
+        items-center
+        gap-3
+      ">
+
+        <span className="
+          flex items-center gap-1
+          text-[10px] text-slate-500
+        ">
+          <i className="h-2 w-2 rounded-full bg-green-600" />
+          Aktif
+        </span>
+
+        <span className="
+          flex items-center gap-1
+          text-[10px] text-slate-500
+        ">
+          <i className="h-2 w-2 rounded-full bg-orange-500" />
+          Perlu Update
+        </span>
+
+        <span className="
+          flex items-center gap-1
+          text-[10px] text-slate-500
+        ">
+          <i className="h-2 w-2 rounded-full bg-red-600" />
+          Kendala Lainnya
+        </span>
+
+      </div>
+
+      {/* CHART */}
+
+      <div className="h-[190px] w-full">
+
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+        >
+
+          <LineChart
+            data={chartData}
+            margin={{
+              top: 5,
+              right: 10,
+              bottom: 5,
+              left: -15,
+            }}
+          >
+
+            <CartesianGrid
+              vertical={false}
+              stroke="#e2e8f0"
+            />
+
             <XAxis
               dataKey="wilayah"
-              tick={{ fontSize: 8, fill: "#94a3b8" }}
-              axisLine={{ stroke: "#e2e8f0" }}
+              tick={{
+                fontSize: 9,
+                fill: "#94a3b8",
+              }}
+              axisLine={{
+                stroke: "#e2e8f0",
+              }}
               tickLine={false}
-              interval={0}
-              angle={-15}
-              textAnchor="end"
-              height={30}
             />
-            <YAxis tick={{ fontSize: 8, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={24} />
-            <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-            {SERIES.map((s) => (
-              <Line
-                key={s.key}
-                type="monotone"
-                dataKey={s.key}
-                stroke={s.color}
-                strokeWidth={1.5}
-                dot={{ r: 2, fill: s.color, strokeWidth: 0 }}
-                activeDot={{ r: 3 }}
-              />
-            ))}
+
+            <YAxis
+              tick={{
+                fontSize: 9,
+                fill: "#94a3b8",
+              }}
+              axisLine={false}
+              tickLine={false}
+              allowDecimals={false}
+            />
+
+            <Tooltip
+              contentStyle={{
+                fontSize: 11,
+                borderRadius: 8,
+                border: "1px solid #e2e8f0",
+              }}
+            />
+
+            <Legend
+              wrapperStyle={{
+                fontSize: 10,
+              }}
+            />
+
+            <Line
+              type="monotone"
+              dataKey="Aktif"
+              stroke="#16a34a"
+              strokeWidth={2}
+              dot={{
+                r: 3,
+                fill: "#16a34a",
+              }}
+            />
+
+            <Line
+              type="monotone"
+              dataKey="Perlu Update"
+              stroke="#f97316"
+              strokeWidth={2}
+              dot={{
+                r: 3,
+                fill: "#f97316",
+              }}
+            />
+
+            <Line
+              type="monotone"
+              dataKey="Kendala Lainnya"
+              stroke="#dc2626"
+              strokeWidth={2}
+              dot={{
+                r: 3,
+                fill: "#dc2626",
+              }}
+            />
+
           </LineChart>
+
         </ResponsiveContainer>
+
       </div>
+
     </div>
+
   );
+
 }
