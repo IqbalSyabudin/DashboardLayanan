@@ -464,7 +464,7 @@ export default function Dashboard() {
             </div>
             <span className="rounded-md bg-green-50 px-3 py-1.5 text-[10px] font-semibold text-green-700">
               <CheckCircle2 size={11} className="mr-1 inline" />
-              Terhubung dengan API
+              Terhubung
             </span>
           </div>
         </Panel>
