@@ -159,13 +159,35 @@ func (h *LayananKeywordHandler) GetLayananKeyword(
 	// SEARCH
 	// ========================================================
 
+	
+	// ========================================================
+	// SEARCH
+	// ========================================================
+
+	keywordOnly := strings.EqualFold(
+		strings.TrimSpace(
+			c.Query("keyword_only"),
+		),
+		"true",
+	)
+
 	if search != "" {
 
 		pattern :=
 			"%" + search + "%"
 
-		query =
-			query.Where(`
+		if keywordOnly {
+
+			// Pencarian khusus kolom keyword
+			query = query.Where(
+				"lk.keyword ILIKE ?",
+				pattern,
+			)
+
+		} else {
+
+			// Pencarian umum seperti sebelumnya
+			query = query.Where(`
 				lk.keyword ILIKE ?
 
 				OR l.kode_layanan ILIKE ?
@@ -182,7 +204,10 @@ func (h *LayananKeywordHandler) GetLayananKeyword(
 				pattern,
 				pattern,
 			)
+
+		}
 	}
+
 
 	// ========================================================
 	// COUNT
