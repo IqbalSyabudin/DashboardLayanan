@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 
 import Topbar from "../components/Topbar";
+import RedSelect from "../components/RedSelect";
 
 import {
   Users,
@@ -739,82 +740,42 @@ export default function Pengguna() {
                 className="shrink-0 text-slate-400"
               />
 
-              <select
+              <RedSelect
                 value={filterStatus}
-                onChange={(e) => {
-                  setFilterStatus(e.target.value);
+                onChange={(value) => {
+                  setFilterStatus(value);
                   setPage(1);
                 }}
-                className="
-                  h-10
-                  rounded-lg
-                  border
-                  border-slate-200
-                  bg-white
-                  px-3
-                  text-xs
-                  text-slate-600
-                  outline-none
-                  focus:border-red-400
-                "
-              >
-
-                <option value="Semua">
-                  Semua Status
-                </option>
-
-                <option value="Aktif">
-                  Aktif
-                </option>
-
-                <option value="Nonaktif">
-                  Nonaktif
-                </option>
-
-              </select>
+                idleBorder="border-slate-200"
+                buttonClassName="h-10 bg-white px-3 text-slate-600"
+                options={[
+                  { value: "Semua", label: "Semua Status" },
+                  { value: "Aktif", label: "Aktif" },
+                  { value: "Nonaktif", label: "Nonaktif" },
+                ]}
+              />
 
             </div>
 
             {/* FILTER INSTANSI */}
 
-            <select
+            <RedSelect
               value={filterInstansi}
-              onChange={(e) => {
-                setFilterInstansi(e.target.value);
+              onChange={(value) => {
+                setFilterInstansi(value);
                 setPage(1);
               }}
-              className="
-                h-10
-                w-full
-                rounded-lg
-                border
-                border-slate-200
-                bg-white
-                px-3
-                text-xs
-                text-slate-600
-                outline-none
-                focus:border-red-400
-                xl:w-64
-              "
-            >
-
-              <option value="Semua">
-                Semua Instansi
-              </option>
-
-              {instansiList.map((instansi) => (
-
-                <option
-                  key={instansi}
-                  value={instansi}
-                >
-                  {instansi}
-                </option>
-
-              ))}
-
-            </select>
+              className="w-full xl:w-64"
+              idleBorder="border-slate-200"
+              buttonClassName="h-10 bg-white px-3 text-slate-600"
+              options={[
+                { value: "Semua", label: "Semua Instansi" },
+                ...instansiList.map((instansi) => ({
+                  value: instansi,
+                  label: instansi,
+                })),
+              ]}
+            />
 
             {/* RESET */}
 

@@ -698,7 +698,6 @@ export default function Status() {
             >
 
               <div>
-
                 <h2
                   className="
                     text-sm
@@ -708,17 +707,6 @@ export default function Status() {
                 >
                   Status Knowledge Base
                 </h2>
-
-                <p
-                  className="
-                    mt-1
-                    text-xs
-                    text-slate-400
-                  "
-                >
-                  Data langsung dari tabel layanan_status.
-                </p>
-
               </div>
 
               <button

@@ -12,6 +12,7 @@ import {
 } from "recharts";
 
 import Topbar from "../components/Topbar";
+import RedSelect from "../components/RedSelect";
 import { apiRequest } from "../services/api";
 
 // ============================================================
@@ -505,43 +506,43 @@ export default function Laporan() {
               />
             </label>
 
-            <label>
+            <div>
               <span className="mb-1.5 block text-[11px] text-slate-500">
                 Kategori
               </span>
-              <select
+              <RedSelect
                 value={category}
-                onChange={e => {
-                  setCategory(e.target.value);
+                onChange={value => {
+                  setCategory(value);
                   setPage(1);
                 }}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs"
-              >
-                <option value="">Semua Kategori</option>
-                {categories.map(item => (
-                  <option key={item} value={item}>{item}</option>
-                ))}
-              </select>
-            </label>
+                idleBorder="border-slate-200"
+                buttonClassName="bg-white px-3 py-2.5 text-slate-800"
+                options={[
+                  { value: "", label: "Semua Kategori" },
+                  ...categories.map(item => ({ value: item, label: item })),
+                ]}
+              />
+            </div>
 
-            <label>
+            <div>
               <span className="mb-1.5 block text-[11px] text-slate-500">
                 Dinas / Instansi
               </span>
-              <select
+              <RedSelect
                 value={instansi}
-                onChange={e => {
-                  setInstansi(e.target.value);
+                onChange={value => {
+                  setInstansi(value);
                   setPage(1);
                 }}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs"
-              >
-                <option value="">Semua Instansi</option>
-                {instansiList.map(item => (
-                  <option key={item} value={item}>{item}</option>
-                ))}
-              </select>
-            </label>
+                idleBorder="border-slate-200"
+                buttonClassName="bg-white px-3 py-2.5 text-slate-800"
+                options={[
+                  { value: "", label: "Semua Instansi" },
+                  ...instansiList.map(item => ({ value: item, label: item })),
+                ]}
+              />
+            </div>
 
             <button
               onClick={downloadReport}
