@@ -1,3 +1,4 @@
+
 import { NavLink } from "react-router-dom";
 import {
   Home,
@@ -12,6 +13,7 @@ import {
   ChevronRight,
   ChevronDown,
 } from "lucide-react";
+
 import Logo from "./Logo";
 import Avatar from "./Avatar";
 import sidebarBg from "../assets/SidebarBG.png";
@@ -28,7 +30,24 @@ const NAV_ITEMS = [
   { to: "/pengaturan", label: "Pengaturan", icon: Settings, hasSubmenu: true },
 ];
 
+const ROLE_LABELS = {
+  super_admin: "Super Admin",
+  admin_pemkot: "Admin Pemkot",
+  admin_pemkab: "Admin Pemkab",
+};
+
 export default function Sidebar() {
+  let user = null;
+
+  try {
+    user = JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    user = null;
+  }
+
+  const username = user?.username || "Pengguna";
+  const role = ROLE_LABELS[user?.role] || "Admin";
+  
   return (
     <aside
       className="hidden lg:flex flex-col w-[280px] shrink-0 h-screen sticky top-0 bg-[#9F1D1D] text-white overflow-hidden bg-cover bg-center bg-no-repeat"
@@ -37,17 +56,19 @@ export default function Sidebar() {
       {/* Brand header */}
       <div className="flex items-center gap-3 px-4 py-4 border-b border-[#991B1B]">
         <Logo size={36} />
+
         <div className="min-w-0">
           <h1 className="font-semibold text-sm leading-tight text-[#FFFFFF] truncate">
             Layanan Informasi Publik
           </h1>
+
           <p className="text-xs text-[#FECACA] truncate">
             Pemerintah Daerah DIY
           </p>
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end, hasSubmenu }) => (
           <NavLink
@@ -68,14 +89,20 @@ export default function Sidebar() {
                   <Icon
                     size={18}
                     strokeWidth={2}
-                    className={`shrink-0 ${isActive ? "text-[#981611]" : "text-[#FCA5A5]"}`}
+                    className={`shrink-0 ${
+                      isActive ? "text-[#981611]" : "text-[#FCA5A5]"
+                    }`}
                   />
+
                   <span className="truncate">{label}</span>
                 </span>
+
                 {hasSubmenu && (
                   <ChevronRight
                     size={15}
-                    className={`shrink-0 ${isActive ? "text-[#981611]" : "text-[#FCA5A5]"}`}
+                    className={`shrink-0 ${
+                      isActive ? "text-[#981611]" : "text-[#FCA5A5]"
+                    }`}
                   />
                 )}
               </>
@@ -86,18 +113,28 @@ export default function Sidebar() {
 
       {/* Bottom Profile */}
       <div className="shrink-0 p-3 border-t border-[#991B1B]">
-        <div className="flex items-center gap-3 rounded-[8px] px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
+        <div className="flex items-center gap-3 rounded-[8px] px-3 py-2">
           <Avatar
-            name="Admin PPID"
+            name={username}
             size={38}
             bg="bg-[#FCA5A5]"
             textColor="text-[#981611]"
           />
+
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[#FFFFFF] truncate">Admin PPID</p>
-            <p className="text-xs text-[#FECACA] truncate">Super Admin</p>
+            <p className="text-sm font-semibold text-white truncate">
+              {username}
+            </p>
+
+            <p className="text-xs text-[#FECACA] truncate">
+              {role}
+            </p>
           </div>
-          <ChevronDown size={14} className="text-[#FCA5A5] shrink-0" />
+
+          <ChevronDown
+            size={14}
+            className="text-[#FCA5A5] shrink-0"
+          />
         </div>
       </div>
     </aside>
