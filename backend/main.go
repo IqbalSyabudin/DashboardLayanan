@@ -11,39 +11,32 @@ import (
 
 func main() {
 
+	// ==========================================================
+	// DATABASE
+	// ==========================================================
+
 	ConnectDatabase()
 
 	// ==========================================================
-	// USER MIGRATION
+	// MIGRATION
 	// ==========================================================
 
 	if err := DB.AutoMigrate(
 		&User{},
 	); err != nil {
-
-		panic(
-			"Gagal melakukan migration: " +
-				err.Error(),
-		)
+		panic("Gagal melakukan migration: " + err.Error())
 	}
 
-	println(
-		"Database migration berhasil!",
-	)
+	println("Database migration berhasil!")
 
 	// ==========================================================
 	// IMPORT EXCEL
 	// ==========================================================
-	//
-	// Jangan aktifkan setiap server berjalan.
-	//
-	// Data layanan yang sudah di-import tidak perlu
-	// di-import ulang setiap kali server dijalankan.
-	//
+
 	// ImportAllExcel()
 
 	// ==========================================================
-	// SEED ADMIN
+	// SEED SUPER ADMIN
 	// ==========================================================
 
 	SeedAdmin()
@@ -52,212 +45,167 @@ func main() {
 	// HANDLER
 	// ==========================================================
 
-	// ----------------------------------------------------------
-	// LAYANAN
-	// ----------------------------------------------------------
+	layananHandler := handlers.NewLayananHandler(DB)
+	wilayahHandler := handlers.NewWilayahHandler(DB)
+	instansiHandler := handlers.NewInstansiHandler(DB)
+	kategoriLayananHandler := handlers.NewKategoriLayananHandler(DB)
+	layananStatusHandler := handlers.NewLayananStatusHandler(DB)
+	layananKeywordHandler := handlers.NewLayananKeywordHandler(DB)
+	userHandler := handlers.NewUserHandler(DB)
 
-	layananHandler :=
-		handlers.NewLayananHandler(DB)
-
-	// ----------------------------------------------------------
-	// WILAYAH
-	// ----------------------------------------------------------
-
-	wilayahHandler :=
-		handlers.NewWilayahHandler(DB)
-
-	// ----------------------------------------------------------
-	// INSTANSI
-	// ----------------------------------------------------------
-
-	instansiHandler :=
-		handlers.NewInstansiHandler(DB)
-
-	// ----------------------------------------------------------
-	// KATEGORI LAYANAN
-	// ----------------------------------------------------------
-
-	kategoriLayananHandler :=
-		handlers.NewKategoriLayananHandler(DB)
-
-	// ----------------------------------------------------------
-	// STATUS LAYANAN
-	// ----------------------------------------------------------
-
-	layananStatusHandler :=
-		handlers.NewLayananStatusHandler(DB)
-
-	// ----------------------------------------------------------
-	// KEYWORD
-	// ----------------------------------------------------------
-
-	layananKeywordHandler :=
-		handlers.NewLayananKeywordHandler(DB)
 	// ==========================================================
-	// GIN
+	// GIN ROUTER
 	// ==========================================================
 
-	router :=
-		gin.Default()
+	router := gin.Default()
 
 	// ==========================================================
 	// CORS
 	// ==========================================================
 
-	router.Use(
-		cors.New(
-			cors.Config{
-
-				AllowOrigins: []string{
-					"http://localhost:5173",
-				},
-
-				AllowMethods: []string{
-					"GET",
-					"POST",
-					"PUT",
-					"DELETE",
-					"OPTIONS",
-				},
-
-				AllowHeaders: []string{
-					"Origin",
-					"Content-Type",
-					"Accept",
-					"Authorization",
-				},
-
-				AllowCredentials: true,
-			},
-		),
-	)
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:5173",
+		},
+		AllowMethods: []string{
+			"GET",
+			"POST",
+			"PUT",
+			"DELETE",
+			"OPTIONS",
+		},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+		},
+		AllowCredentials: true,
+	}))
 
 	// ==========================================================
 	// API GROUP
 	// ==========================================================
 
-	api :=
-		router.Group("/api")
+	api := router.Group("/api")
 
 	// ==========================================================
 	// AUTH
 	// ==========================================================
-	api.POST(
-		"/login",
-		Login,
-	)
+
+	api.POST("/login", Login)
 
 	// ==========================================================
-	// LAYANAN
-	// PUBLIC READ
+	// PUBLIC READ - LAYANAN
 	// ==========================================================
 
 	api.GET(
 		"/layanan",
+		OptionalAuthMiddleware(),
 		layananHandler.GetLayanans,
 	)
 
 	api.GET(
 		"/layanan/:id",
+		OptionalAuthMiddleware(),
 		layananHandler.GetLayananByID,
 	)
 
 	// ==========================================================
-	// WILAYAH
-	// PUBLIC READ
+	// PUBLIC READ - WILAYAH
 	// ==========================================================
 
 	api.GET(
 		"/wilayah",
+		OptionalAuthMiddleware(),
 		wilayahHandler.GetWilayah,
 	)
 
 	api.GET(
 		"/wilayah/:id",
+		OptionalAuthMiddleware(),
 		wilayahHandler.GetWilayahByID,
 	)
 
 	// ==========================================================
-	// INSTANSI
-	// PUBLIC READ
+	// PUBLIC READ - INSTANSI
 	// ==========================================================
 
 	api.GET(
 		"/instansi",
+		OptionalAuthMiddleware(),
 		instansiHandler.GetInstansi,
 	)
 
-	// IMPORTANT:
-	// /summary harus berada sebelum /:id
-
 	api.GET(
 		"/instansi/summary",
+		OptionalAuthMiddleware(),
 		instansiHandler.GetInstansiSummary,
 	)
 
 	api.GET(
 		"/instansi/:id",
+		OptionalAuthMiddleware(),
 		instansiHandler.GetInstansiByID,
 	)
 
 	// ==========================================================
-	// KATEGORI LAYANAN
-	// PUBLIC READ
+	// PUBLIC READ - KATEGORI LAYANAN
 	// ==========================================================
 
 	api.GET(
 		"/kategori-layanan",
+		OptionalAuthMiddleware(),
 		kategoriLayananHandler.GetKategoriLayanan,
 	)
 
 	api.GET(
 		"/kategori-layanan/:id",
+		OptionalAuthMiddleware(),
 		kategoriLayananHandler.GetKategoriLayananByID,
 	)
 
 	// ==========================================================
-	// STATUS
-	// PUBLIC READ
+	// PUBLIC READ - STATUS LAYANAN
 	// ==========================================================
 
 	api.GET(
 		"/layanan-status",
+		OptionalAuthMiddleware(),
 		layananStatusHandler.GetLayananStatus,
 	)
 
-	// IMPORTANT:
-	// /summary harus sebelum /:id
-
 	api.GET(
 		"/layanan-status/summary",
+		OptionalAuthMiddleware(),
 		layananStatusHandler.GetLayananStatusSummary,
 	)
 
 	api.GET(
 		"/layanan-status/:id",
+		OptionalAuthMiddleware(),
 		layananStatusHandler.GetLayananStatusByID,
 	)
 
 	// ==========================================================
-	// KEYWORD
-	// PUBLIC READ
+	// PUBLIC READ - KEYWORD
 	// ==========================================================
 
 	api.GET(
 		"/layanan-keyword",
+		OptionalAuthMiddleware(),
 		layananKeywordHandler.GetLayananKeyword,
 	)
 
-	// IMPORTANT:
-	// /summary harus sebelum /:id
-
 	api.GET(
 		"/layanan-keyword/summary",
+		OptionalAuthMiddleware(),
 		layananKeywordHandler.GetLayananKeywordSummary,
 	)
 
 	api.GET(
 		"/layanan-keyword/:id",
+		OptionalAuthMiddleware(),
 		layananKeywordHandler.GetLayananKeywordByID,
 	)
 
@@ -265,12 +213,21 @@ func main() {
 	// PROTECTED ROUTES
 	// ==========================================================
 
-	protected :=
-		api.Group("/")
+	protected := api.Group("/")
+	protected.Use(AuthMiddleware())
 
-	protected.Use(
-		AuthMiddleware(),
-	)
+	// ==========================================================
+	// PENGELOLAAN PENGGUNA
+	// SUPER ADMIN ONLY
+	// ==========================================================
+
+	pengguna := protected.Group("/pengguna")
+	pengguna.Use(RequireRole(RoleSuperAdmin))
+
+	pengguna.GET("", userHandler.GetUsers)
+	pengguna.POST("", userHandler.CreateUser)
+	pengguna.PUT("/:id", userHandler.UpdateUser)
+	pengguna.DELETE("/:id", userHandler.DeleteUser)
 
 	// ==========================================================
 	// CRUD LAYANAN
@@ -293,6 +250,8 @@ func main() {
 
 	// ==========================================================
 	// CRUD WILAYAH
+	// SUPER ADMIN ONLY
+	// Pembatasan dilakukan di WilayahHandler.
 	// ==========================================================
 
 	protected.POST(
@@ -331,6 +290,8 @@ func main() {
 
 	// ==========================================================
 	// CRUD KATEGORI LAYANAN
+	// SUPER ADMIN ONLY
+	// Pembatasan dilakukan di KategoriLayananHandler.
 	// ==========================================================
 
 	protected.POST(
@@ -368,32 +329,18 @@ func main() {
 	)
 
 	// ==========================================================
-	// PORT
+	// SERVER
 	// ==========================================================
 
-	port :=
-		os.Getenv("PORT")
+	port := os.Getenv("PORT")
 
 	if port == "" {
 		port = "8080"
 	}
 
-	println(
-		"Server berjalan di port " +
-			port,
-	)
+	println("Server berjalan di port " + port)
 
-	// ==========================================================
-	// RUN SERVER
-	// ==========================================================
-
-	if err := router.Run(
-		":" + port,
-	); err != nil {
-
-		panic(
-			"Gagal menjalankan server: " +
-				err.Error(),
-		)
+	if err := router.Run(":" + port); err != nil {
+		panic("Gagal menjalankan server: " + err.Error())
 	}
 }

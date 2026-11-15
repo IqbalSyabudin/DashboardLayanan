@@ -23,6 +23,96 @@ func NewWilayahHandler(db *gorm.DB) *WilayahHandler {
 }
 
 // ============================================================
+// HELPER ROLE DAN WILAYAH
+// ============================================================
+
+// Mengambil wilayah_id dari context autentikasi.
+func getUserWilayahID(c *gin.Context) (uint64, bool) {
+	value, exists := c.Get("wilayah_id")
+
+	if !exists || value == nil {
+		return 0, false
+	}
+
+	switch wilayahID := value.(type) {
+	case *uint64:
+		if wilayahID == nil || *wilayahID == 0 {
+			return 0, false
+		}
+		return *wilayahID, true
+
+	case uint64:
+		if wilayahID == 0 {
+			return 0, false
+		}
+		return wilayahID, true
+
+	case uint:
+		if wilayahID == 0 {
+			return 0, false
+		}
+		return uint64(wilayahID), true
+
+	case int:
+		if wilayahID <= 0 {
+			return 0, false
+		}
+		return uint64(wilayahID), true
+
+	default:
+		return 0, false
+	}
+}
+
+// Membatasi query berdasarkan wilayah akun.
+func applyWilayahScope(
+	query *gorm.DB,
+	c *gin.Context,
+) *gorm.DB {
+
+	role := c.GetString("role")
+
+	// Pengunjung publik melihat seluruh wilayah; Super Admin hanya DIY dan Pusat.
+	if role == "" {
+		return query
+	}
+	if role == RoleSuperAdmin {
+		return query.Where("id IN ?", superAdminWilayahIDs)
+	}
+
+	wilayahID, valid := getUserWilayahID(c)
+
+	if !valid {
+		return query.Where("1 = 0")
+	}
+
+	return query.Where("id = ?", wilayahID)
+}
+
+// Memastikan hanya Super Admin yang dapat mengelola wilayah.
+func requireSuperAdmin(c *gin.Context) bool {
+	if c.GetString("role") == "super_admin" {
+		return true
+	}
+
+	c.JSON(http.StatusForbidden, gin.H{
+		"success": false,
+		"message": "Akses ditolak. Hanya Super Admin yang dapat mengelola data wilayah",
+	})
+
+	return false
+}
+
+// ============================================================
+// REQUEST
+// ============================================================
+
+type WilayahRequest struct {
+	Nama string `json:"nama" binding:"required"`
+	Tipe string `json:"tipe" binding:"required"`
+}
+
+// ============================================================
 // GET /api/wilayah
 // ============================================================
 
@@ -31,18 +121,28 @@ func (h *WilayahHandler) GetWilayah(c *gin.Context) {
 	var wilayah []models.Wilayah
 
 	query := h.DB.
-		Model(&models.Wilayah{}).
-		Order("id ASC")
+		Model(&models.Wilayah{})
 
-	if search := c.Query("search"); search != "" {
+	// PEMBATASAN WILAYAH BERDASARKAN AKUN
+	query = applyWilayahScope(query, c)
+
+	// SEARCH
+	search := strings.TrimSpace(c.Query("search"))
+
+	if search != "" {
+		pattern := "%" + search + "%"
+
 		query = query.Where(
 			"nama ILIKE ? OR tipe ILIKE ?",
-			"%"+search+"%",
-			"%"+search+"%",
+			pattern,
+			pattern,
 		)
 	}
 
-	if err := query.Find(&wilayah).Error; err != nil {
+	if err := query.
+		Order("id ASC").
+		Find(&wilayah).Error; err != nil {
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"message": "Gagal mengambil data wilayah",
@@ -69,7 +169,7 @@ func (h *WilayahHandler) GetWilayahByID(c *gin.Context) {
 		64,
 	)
 
-	if err != nil {
+	if err != nil || id == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": "ID wilayah tidak valid",
@@ -79,7 +179,14 @@ func (h *WilayahHandler) GetWilayahByID(c *gin.Context) {
 
 	var wilayah models.Wilayah
 
-	if err := h.DB.First(&wilayah, id).Error; err != nil {
+	query := h.DB.
+		Model(&models.Wilayah{}).
+		Where("id = ?", id)
+
+	// PEMBATASAN WILAYAH BERDASARKAN AKUN
+	query = applyWilayahScope(query, c)
+
+	if err := query.First(&wilayah).Error; err != nil {
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{
@@ -105,14 +212,14 @@ func (h *WilayahHandler) GetWilayahByID(c *gin.Context) {
 
 // ============================================================
 // POST /api/wilayah
+// SUPER ADMIN ONLY
 // ============================================================
 
-type WilayahRequest struct {
-	Nama string `json:"nama" binding:"required"`
-	Tipe string `json:"tipe" binding:"required"`
-}
-
 func (h *WilayahHandler) CreateWilayah(c *gin.Context) {
+
+	if !requireSuperAdmin(c) {
+		return
+	}
 
 	var input WilayahRequest
 
@@ -128,6 +235,15 @@ func (h *WilayahHandler) CreateWilayah(c *gin.Context) {
 	input.Nama = strings.TrimSpace(input.Nama)
 	input.Tipe = strings.TrimSpace(input.Tipe)
 
+	if input.Nama == "" || input.Tipe == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Nama dan tipe wilayah wajib diisi",
+		})
+		return
+	}
+
+	// CEK DUPLIKASI
 	var existing models.Wilayah
 
 	err := h.DB.
@@ -156,6 +272,7 @@ func (h *WilayahHandler) CreateWilayah(c *gin.Context) {
 		return
 	}
 
+	// CREATE WILAYAH
 	wilayah := models.Wilayah{
 		Nama: input.Nama,
 		Tipe: input.Tipe,
@@ -179,9 +296,14 @@ func (h *WilayahHandler) CreateWilayah(c *gin.Context) {
 
 // ============================================================
 // PUT /api/wilayah/:id
+// SUPER ADMIN ONLY
 // ============================================================
 
 func (h *WilayahHandler) UpdateWilayah(c *gin.Context) {
+
+	if !requireSuperAdmin(c) {
+		return
+	}
 
 	id, err := strconv.ParseUint(
 		c.Param("id"),
@@ -189,7 +311,7 @@ func (h *WilayahHandler) UpdateWilayah(c *gin.Context) {
 		64,
 	)
 
-	if err != nil {
+	if err != nil || id == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": "ID wilayah tidak valid",
@@ -231,6 +353,15 @@ func (h *WilayahHandler) UpdateWilayah(c *gin.Context) {
 	input.Nama = strings.TrimSpace(input.Nama)
 	input.Tipe = strings.TrimSpace(input.Tipe)
 
+	if input.Nama == "" || input.Tipe == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Nama dan tipe wilayah wajib diisi",
+		})
+		return
+	}
+
+	// CEK DUPLIKASI
 	var duplicate models.Wilayah
 
 	err = h.DB.
@@ -260,6 +391,7 @@ func (h *WilayahHandler) UpdateWilayah(c *gin.Context) {
 		return
 	}
 
+	// UPDATE WILAYAH
 	wilayah.Nama = input.Nama
 	wilayah.Tipe = input.Tipe
 
@@ -281,9 +413,14 @@ func (h *WilayahHandler) UpdateWilayah(c *gin.Context) {
 
 // ============================================================
 // DELETE /api/wilayah/:id
+// SUPER ADMIN ONLY
 // ============================================================
 
 func (h *WilayahHandler) DeleteWilayah(c *gin.Context) {
+
+	if !requireSuperAdmin(c) {
+		return
+	}
 
 	id, err := strconv.ParseUint(
 		c.Param("id"),
@@ -291,7 +428,7 @@ func (h *WilayahHandler) DeleteWilayah(c *gin.Context) {
 		64,
 	)
 
-	if err != nil {
+	if err != nil || id == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": "ID wilayah tidak valid",
@@ -319,6 +456,7 @@ func (h *WilayahHandler) DeleteWilayah(c *gin.Context) {
 		return
 	}
 
+	// CEK INSTANSI YANG MENGGUNAKAN WILAYAH
 	var jumlahInstansi int64
 
 	if err := h.DB.
@@ -344,6 +482,7 @@ func (h *WilayahHandler) DeleteWilayah(c *gin.Context) {
 		return
 	}
 
+	// DELETE WILAYAH
 	if err := h.DB.Delete(&wilayah).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
