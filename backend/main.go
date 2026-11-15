@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"endpoint_api/handlers"
+	"endpoint_api/models"
 )
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 
 	if err := DB.AutoMigrate(
 		&User{},
+		&models.Pengaduan{},
 	); err != nil {
 		panic("Gagal melakukan migration: " + err.Error())
 	}
@@ -36,10 +38,11 @@ func main() {
 	// ImportAllExcel()
 
 	// ==========================================================
-	// SEED SUPER ADMIN
+	// SEED SUPER ADMIN & PENGADUAN
 	// ==========================================================
 
 	SeedAdmin()
+	SeedPengaduan()
 
 	// ==========================================================
 	// HANDLER
@@ -52,6 +55,7 @@ func main() {
 	layananStatusHandler := handlers.NewLayananStatusHandler(DB)
 	layananKeywordHandler := handlers.NewLayananKeywordHandler(DB)
 	userHandler := handlers.NewUserHandler(DB)
+	pengaduanHandler := handlers.NewPengaduanHandler(DB)
 
 	// ==========================================================
 	// GIN ROUTER
@@ -326,6 +330,52 @@ func main() {
 	protected.DELETE(
 		"/layanan-keyword/:id",
 		layananKeywordHandler.DeleteLayananKeyword,
+	)
+
+	// ==========================================================
+	// CRUD PENGADUAN
+	// ==========================================================
+
+	api.GET(
+		"/pengaduan",
+		OptionalAuthMiddleware(),
+		pengaduanHandler.GetPengaduan,
+	)
+
+	api.GET(
+		"/pengaduan/summary",
+		OptionalAuthMiddleware(),
+		pengaduanHandler.GetPengaduanSummary,
+	)
+
+	api.GET(
+		"/pengaduan/:id",
+		OptionalAuthMiddleware(),
+		pengaduanHandler.GetPengaduanByID,
+	)
+
+	api.POST(
+		"/pengaduan",
+		OptionalAuthMiddleware(),
+		pengaduanHandler.CreatePengaduan,
+	)
+
+	api.POST(
+		"/pengaduan/simulasi",
+		OptionalAuthMiddleware(),
+		pengaduanHandler.SimulasiAduan,
+	)
+
+	api.PUT(
+		"/pengaduan/:id",
+		OptionalAuthMiddleware(),
+		pengaduanHandler.UpdatePengaduan,
+	)
+
+	api.DELETE(
+		"/pengaduan/:id",
+		OptionalAuthMiddleware(),
+		pengaduanHandler.DeletePengaduan,
 	)
 
 	// ==========================================================
