@@ -1639,16 +1639,10 @@ func parseRawRow(
 	//
 	// 82
 
-	if strings.HasSuffix(
+	value = strings.TrimSuffix(
 		value,
 		".0",
-	) {
-
-		value = strings.TrimSuffix(
-			value,
-			".0",
-		)
-	}
+	)
 
 	number, err := strconv.Atoi(
 		value,

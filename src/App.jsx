@@ -41,6 +41,9 @@ import Pengguna from "./pages/Pengguna";
 // LAPORAN
 import Laporan from "./pages/Laporan";
 
+// PENGADUAN
+import Pengaduan from "./pages/Pengaduan";
+
 // PENGATURAN
 import Pengaturan from "./pages/Pengaturan";
 
@@ -219,23 +222,17 @@ export default function App() {
         {/* ================================================= */}
         {/* PENGADUAN */}
         {/* ================================================= */}
-        {/* Pengaduan belum dibuat sebagai modul database,
-            sehingga sementara menggunakan ComingSoon. */}
 
         <Route
           path="/pengaduan"
           element={
-            <ComingSoon
-              title="Pengaduan"
-            />
+            <Pengaduan />
           }
         />
 
         {/* ================================================= */}
         {/* PENGATURAN */}
         {/* ================================================= */}
-        {/* Sekarang sudah menggunakan halaman Pengaturan
-            yang sudah kita buat. */}
 
         <Route
           path="/pengaturan"
