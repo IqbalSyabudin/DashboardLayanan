@@ -15,45 +15,64 @@ func SeedAdmin() {
 	password := os.Getenv("ADMIN_PASSWORD")
 
 	if username == "" || password == "" {
-		log.Fatal("ADMIN_USERNAME dan ADMIN_PASSWORD wajib diatur di backend/.env")
+		log.Fatal("ADMIN_USERNAME dan ADMIN_PASSWORD wajib diatur")
 	}
+
 	if len(password) < 12 {
 		log.Fatal("ADMIN_PASSWORD harus minimal 12 karakter")
 	}
+
 	if len(password) > 72 {
-		log.Fatal("ADMIN_PASSWORD tidak boleh lebih dari 72 byte untuk bcrypt")
+		log.Fatal("ADMIN_PASSWORD tidak boleh lebih dari 72 byte")
 	}
 
 	var admin User
+
 	err := DB.Where("username = ?", username).First(&admin).Error
+
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Fatal("Gagal mencari akun admin: ", err)
 	}
 
+	hash, hashErr := bcrypt.GenerateFromPassword(
+		[]byte(password),
+		bcrypt.DefaultCost,
+	)
+
+	if hashErr != nil {
+		log.Fatal("Gagal hash password admin: ", hashErr)
+	}
+
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		hash, hashErr := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if hashErr != nil {
-			log.Fatal("Gagal hash password admin: ", hashErr)
+		admin = User{
+			Username: username,
+			Password: string(hash),
+			Role:     RoleSuperAdmin,
 		}
-		admin = User{Username: username, Password: string(hash)}
-		if createErr := DB.Create(&admin).Error; createErr != nil {
-			log.Fatal("Gagal membuat akun admin: ", createErr)
+
+		if err := DB.Create(&admin).Error; err != nil {
+			log.Fatal("Gagal membuat akun Super Admin: ", err)
 		}
-		log.Println("Akun admin berhasil dibuat.")
+
+		log.Println("Akun Super Admin berhasil dibuat.")
 		return
 	}
 
-	if bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(password)) != nil {
-		hash, hashErr := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if hashErr != nil {
-			log.Fatal("Gagal hash password admin: ", hashErr)
-		}
-		if updateErr := DB.Model(&admin).Update("password", string(hash)).Error; updateErr != nil {
-			log.Fatal("Gagal memperbarui password admin: ", updateErr)
-		}
-		log.Println("Password admin berhasil diperbarui dari konfigurasi.")
-		return
+	updates := map[string]interface{}{
+		"role":       RoleSuperAdmin,
+		"wilayah_id": nil,
 	}
 
-	log.Println("Akun admin tersedia.")
+	if bcrypt.CompareHashAndPassword(
+		[]byte(admin.Password),
+		[]byte(password),
+	) != nil {
+		updates["password"] = string(hash)
+	}
+
+	if err := DB.Model(&admin).Updates(updates).Error; err != nil {
+		log.Fatal("Gagal memperbarui akun Super Admin: ", err)
+	}
+
+	log.Println("Akun Super Admin tersedia.")
 }

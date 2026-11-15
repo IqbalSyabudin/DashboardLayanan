@@ -18,10 +18,7 @@ type LayananStatusHandler struct {
 	DB *gorm.DB
 }
 
-func NewLayananStatusHandler(
-	db *gorm.DB,
-) *LayananStatusHandler {
-
+func NewLayananStatusHandler(db *gorm.DB) *LayananStatusHandler {
 	return &LayananStatusHandler{
 		DB: db,
 	}
@@ -32,23 +29,15 @@ func NewLayananStatusHandler(
 // ============================================================
 
 type LayananStatusResponse struct {
-	ID uint64 `json:"id"`
-
-	LayananID uint64 `json:"layanan_id"`
-
-	Status string `json:"status"`
-
-	Catatan *string `json:"catatan"`
-
-	CheckedAt *time.Time `json:"checked_at"`
-
-	KodeLayanan string `json:"kode_layanan"`
-
-	NamaLayanan string `json:"nama_layanan"`
-
-	NamaInstansi string `json:"nama_instansi"`
-
-	Wilayah string `json:"wilayah"`
+	ID           uint64     `json:"id"`
+	LayananID    uint64     `json:"layanan_id"`
+	Status       string     `json:"status"`
+	Catatan      *string    `json:"catatan"`
+	CheckedAt    *time.Time `json:"checked_at"`
+	KodeLayanan  string     `json:"kode_layanan"`
+	NamaLayanan  string     `json:"nama_layanan"`
+	NamaInstansi string     `json:"nama_instansi"`
+	Wilayah      string     `json:"wilayah"`
 }
 
 // ============================================================
@@ -65,63 +54,59 @@ type LayananStatusSummary struct {
 }
 
 // ============================================================
+// WILAYAH ACCESS SCOPE
+// ============================================================
+
+func applyLayananStatusWilayahScope(query *gorm.DB, c *gin.Context) *gorm.DB {
+	role := strings.TrimSpace(c.GetString("role"))
+	if role == "" {
+		return query
+	}
+	if role == RoleSuperAdmin {
+		return query.Where(`EXISTS (SELECT 1 FROM layanan l_scope JOIN instansi i_scope ON i_scope.id=l_scope.instansi_id WHERE l_scope.id=ls.layanan_id AND i_scope.wilayah_id IN ?)`, superAdminWilayahIDs)
+	}
+	id, ok := contextWilayahID(c)
+	if !ok || (role != RoleAdminPemkot && role != RoleAdminPemkab) {
+		return query.Where("1 = 0")
+	}
+	return query.Where(`EXISTS (SELECT 1 FROM layanan l_scope JOIN instansi i_scope ON i_scope.id=l_scope.instansi_id WHERE l_scope.id=ls.layanan_id AND i_scope.wilayah_id = ?)`, id)
+}
+
+// ============================================================
+// BASE QUERY
+// ============================================================
+
+func (h *LayananStatusHandler) baseStatusQuery() *gorm.DB {
+	return h.DB.
+		Table("layanan_status ls").
+		Joins(`
+			LEFT JOIN layanan l
+				ON l.id = ls.layanan_id
+		`).
+		Joins(`
+			LEFT JOIN instansi i
+				ON i.id = l.instansi_id
+		`).
+		Joins(`
+			LEFT JOIN wilayah w
+				ON w.id = i.wilayah_id
+		`)
+}
+
+// ============================================================
 // GET /api/layanan-status
 // ============================================================
-//
-// Query:
-//
-// /api/layanan-status
-//
-// /api/layanan-status?page=1&limit=10
-//
-// /api/layanan-status?search=KIA
-//
-// /api/layanan-status?status=VERIFIED
-//
-// ============================================================
 
-func (h *LayananStatusHandler) GetLayananStatus(
-	c *gin.Context,
-) {
+func (h *LayananStatusHandler) GetLayananStatus(c *gin.Context) {
+	search := strings.TrimSpace(c.Query("search"))
+	statusFilter := strings.TrimSpace(c.Query("status"))
 
-	// ========================================================
-	// QUERY PARAMETER
-	// ========================================================
-
-	search :=
-		strings.TrimSpace(
-			c.Query("search"),
-		)
-
-	statusFilter :=
-		strings.TrimSpace(
-			c.Query("status"),
-		)
-
-	// ========================================================
-	// PAGINATION
-	// ========================================================
-
-	page, err :=
-		strconv.Atoi(
-			c.DefaultQuery(
-				"page",
-				"1",
-			),
-		)
-
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 	if err != nil || page < 1 {
 		page = 1
 	}
 
-	limit, err :=
-		strconv.Atoi(
-			c.DefaultQuery(
-				"limit",
-				"10",
-			),
-		)
-
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	if err != nil || limit < 1 {
 		limit = 10
 	}
@@ -130,349 +115,222 @@ func (h *LayananStatusHandler) GetLayananStatus(
 		limit = 100
 	}
 
-	offset :=
-		(page - 1) * limit
+	offset := (page - 1) * limit
 
-	// ========================================================
-	// BASE QUERY
-	// ========================================================
+	query := applyLayananStatusWilayahScope(
+		h.baseStatusQuery(),
+		c,
+	)
 
-	query :=
-		h.DB.
-			Table("layanan_status ls").
-			Joins(`
-				LEFT JOIN layanan l
-					ON l.id = ls.layanan_id
-			`).
-			Joins(`
-				LEFT JOIN instansi i
-					ON i.id = l.instansi_id
-			`).
-			Joins(`
-				LEFT JOIN wilayah w
-					ON w.id = i.wilayah_id
-			`)
-
-	// ========================================================
-	// SEARCH
-	// ========================================================
-
+	// Search
 	if search != "" {
+		pattern := "%" + search + "%"
 
-		pattern :=
-			"%" + search + "%"
-
-		query =
-			query.Where(`
+		query = query.Where(`
+			(
 				ls.status ILIKE ?
-
 				OR COALESCE(ls.catatan, '') ILIKE ?
-
 				OR l.kode_layanan ILIKE ?
-
 				OR l.nama_layanan ILIKE ?
-
 				OR i.nama_instansi ILIKE ?
-
 				OR w.nama ILIKE ?
-			`,
-				pattern,
-				pattern,
-				pattern,
-				pattern,
-				pattern,
-				pattern,
 			)
+		`,
+			pattern,
+			pattern,
+			pattern,
+			pattern,
+			pattern,
+			pattern,
+		)
 	}
 
-	// ========================================================
-	// FILTER STATUS
-	// ========================================================
-
+	// Filter status
 	if statusFilter != "" {
-
-		query =
-			query.Where(
-				"UPPER(ls.status) = UPPER(?)",
-				statusFilter,
-			)
+		query = query.Where(
+			"UPPER(ls.status) = UPPER(?)",
+			statusFilter,
+		)
 	}
 
-	// ========================================================
-	// COUNT
-	// ========================================================
-
+	// Count
 	var total int64
 
 	if err := query.
-		Count(
-			&total,
-		).
+		Count(&total).
 		Error; err != nil {
-
-		c.JSON(
-			http.StatusInternalServerError,
-			gin.H{
-				"success": false,
-				"message": "Gagal menghitung data status layanan",
-				"error":   err.Error(),
-			},
-		)
-
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal menghitung data status layanan",
+			"error":   err.Error(),
+		})
 		return
 	}
 
-	// ========================================================
-	// DATA
-	// ========================================================
-
+	// Data
 	var rows []LayananStatusResponse
 
-	err =
-		query.
-			Select(`
-				ls.id,
-				ls.layanan_id,
-				ls.status,
-				ls.catatan,
-				ls.checked_at,
-
-				l.kode_layanan,
-				l.nama_layanan,
-
-				i.nama_instansi,
-
-				w.nama AS wilayah
-			`).
-			Order(
-				"ls.id ASC",
-			).
-			Limit(
-				limit,
-			).
-			Offset(
-				offset,
-			).
-			Scan(
-				&rows,
-			).
-			Error
+	err = query.
+		Select(`
+			ls.id,
+			ls.layanan_id,
+			ls.status,
+			ls.catatan,
+			ls.checked_at,
+			l.kode_layanan,
+			l.nama_layanan,
+			i.nama_instansi,
+			w.nama AS wilayah
+		`).
+		Order("ls.id ASC").
+		Limit(limit).
+		Offset(offset).
+		Scan(&rows).
+		Error
 
 	if err != nil {
-
-		c.JSON(
-			http.StatusInternalServerError,
-			gin.H{
-				"success": false,
-				"message": "Gagal mengambil data status layanan",
-				"error":   err.Error(),
-			},
-		)
-
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal mengambil data status layanan",
+			"error":   err.Error(),
+		})
 		return
 	}
 
-	// ========================================================
-	// TOTAL PAGES
-	// ========================================================
-
 	totalPages := 0
-
 	if total > 0 {
-
-		totalPages =
-			int(
-				(total +
-					int64(limit) -
-					1) /
-					int64(limit),
-			)
+		totalPages = int(
+			(total + int64(limit) - 1) / int64(limit),
+		)
 	}
 
-	// ========================================================
-	// RESPONSE
-	// ========================================================
-
-	c.JSON(
-		http.StatusOK,
-		gin.H{
-			"success": true,
-
-			"pagination": gin.H{
-				"page":        page,
-				"limit":       limit,
-				"total":       total,
-				"total_pages": totalPages,
-			},
-
-			"data": rows,
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"pagination": gin.H{
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
+			"total_pages": totalPages,
 		},
-	)
+		"data": rows,
+	})
 }
 
 // ============================================================
 // GET /api/layanan-status/summary
 // ============================================================
 
-func (h *LayananStatusHandler) GetLayananStatusSummary(
-	c *gin.Context,
-) {
-
+func (h *LayananStatusHandler) GetLayananStatusSummary(c *gin.Context) {
 	var summary LayananStatusSummary
 
-	err :=
-		h.DB.
-			Table("layanan_status").
-			Select(`
-				COUNT(*) AS total,
+	query := applyLayananStatusWilayahScope(
+		h.baseStatusQuery(),
+		c,
+	)
 
-				COUNT(*) FILTER (
-					WHERE UPPER(status) = 'VERIFIED'
-				) AS verified,
+	err := query.
+		Select(`
+			COUNT(DISTINCT ls.id) AS total,
 
-				COUNT(*) FILTER (
-					WHERE UPPER(status) = 'NEED_REVIEW'
-				) AS need_review,
+			COUNT(DISTINCT ls.id) FILTER (
+				WHERE UPPER(ls.status) = 'VERIFIED'
+			) AS verified,
 
-				COUNT(*) FILTER (
-					WHERE UPPER(status) = 'READY_RAG'
-				) AS ready_rag,
+			COUNT(DISTINCT ls.id) FILTER (
+				WHERE UPPER(ls.status) = 'NEED_REVIEW'
+			) AS need_review,
 
-				COUNT(*) FILTER (
-					WHERE UPPER(status) = 'CLEANED'
-				) AS cleaned,
+			COUNT(DISTINCT ls.id) FILTER (
+				WHERE UPPER(ls.status) = 'READY_RAG'
+			) AS ready_rag,
 
-				COUNT(*) FILTER (
-					WHERE UPPER(status) = 'RAW'
-				) AS raw
-			`).
-			Scan(
-				&summary,
-			).
-			Error
+			COUNT(DISTINCT ls.id) FILTER (
+				WHERE UPPER(ls.status) = 'CLEANED'
+			) AS cleaned,
+
+			COUNT(DISTINCT ls.id) FILTER (
+				WHERE UPPER(ls.status) = 'RAW'
+			) AS raw
+		`).
+		Scan(&summary).
+		Error
 
 	if err != nil {
-
-		c.JSON(
-			http.StatusInternalServerError,
-			gin.H{
-				"success": false,
-				"message": "Gagal mengambil statistik status layanan",
-				"error":   err.Error(),
-			},
-		)
-
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal mengambil statistik status layanan",
+			"error":   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(
-		http.StatusOK,
-		gin.H{
-			"success": true,
-			"data":    summary,
-		},
-	)
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    summary,
+	})
 }
 
 // ============================================================
 // GET /api/layanan-status/:id
 // ============================================================
 
-func (h *LayananStatusHandler) GetLayananStatusByID(
-	c *gin.Context,
-) {
+func (h *LayananStatusHandler) GetLayananStatusByID(c *gin.Context) {
+	id, err := strconv.ParseUint(
+		c.Param("id"),
+		10,
+		64,
+	)
 
-	id, err :=
-		strconv.ParseUint(
-			c.Param("id"),
-			10,
-			64,
-		)
-
-	if err != nil {
-
-		c.JSON(
-			http.StatusBadRequest,
-			gin.H{
-				"success": false,
-				"message": "ID status tidak valid",
-			},
-		)
-
+	if err != nil || id == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "ID status tidak valid",
+		})
 		return
 	}
 
 	var row LayananStatusResponse
 
-	result :=
-		h.DB.
-			Table("layanan_status ls").
-			Joins(`
-				LEFT JOIN layanan l
-					ON l.id = ls.layanan_id
-			`).
-			Joins(`
-				LEFT JOIN instansi i
-					ON i.id = l.instansi_id
-			`).
-			Joins(`
-				LEFT JOIN wilayah w
-					ON w.id = i.wilayah_id
-			`).
-			Select(`
-				ls.id,
-				ls.layanan_id,
-				ls.status,
-				ls.catatan,
-				ls.checked_at,
+	query := applyLayananStatusWilayahScope(
+		h.baseStatusQuery(),
+		c,
+	)
 
-				l.kode_layanan,
-				l.nama_layanan,
-
-				i.nama_instansi,
-
-				w.nama AS wilayah
-			`).
-			Where(
-				"ls.id = ?",
-				id,
-			).
-			Scan(
-				&row,
-			)
+	result := query.
+		Select(`
+			ls.id,
+			ls.layanan_id,
+			ls.status,
+			ls.catatan,
+			ls.checked_at,
+			l.kode_layanan,
+			l.nama_layanan,
+			i.nama_instansi,
+			w.nama AS wilayah
+		`).
+		Where("ls.id = ?", id).
+		Limit(1).
+		Scan(&row)
 
 	if result.Error != nil {
-
-		c.JSON(
-			http.StatusInternalServerError,
-			gin.H{
-				"success": false,
-				"message": "Gagal mengambil detail status",
-				"error":   result.Error.Error(),
-			},
-		)
-
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal mengambil detail status",
+			"error":   result.Error.Error(),
+		})
 		return
 	}
 
 	if row.ID == 0 {
-
-		c.JSON(
-			http.StatusNotFound,
-			gin.H{
-				"success": false,
-				"message": "Status layanan tidak ditemukan",
-			},
-		)
-
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"message": "Status layanan tidak ditemukan",
+		})
 		return
 	}
 
-	c.JSON(
-		http.StatusOK,
-		gin.H{
-			"success": true,
-			"data":    row,
-		},
-	)
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    row,
+	})
 }
