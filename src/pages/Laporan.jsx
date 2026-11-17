@@ -1,14 +1,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  FileText, CheckCircle2, RefreshCw, AlertTriangle,
+  CheckCircle2, RefreshCw, AlertTriangle,
   Download, Search, ChevronLeft, ChevronRight,
-  CalendarDays, Building2, Layers,
+  Layers,
 } from "lucide-react";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie,
-  Cell, Legend,
+  Cell,
 } from "recharts";
 
 import Topbar from "../components/Topbar";
@@ -100,7 +100,7 @@ function Panel({ children, className = "" }) {
 function EmptyState({ message }) {
   return (
     <div className="flex h-48 flex-col items-center justify-center gap-2 text-center">
-      <FileText size={26} className="text-slate-300" />
+      <Layers size={26} className="text-slate-300" />
       <p className="text-xs text-slate-400">{message}</p>
     </div>
   );
@@ -382,18 +382,6 @@ export default function Laporan() {
   }, [filtered]);
 
   // ==========================================================
-  // LAYANAN TERBARU
-  // ==========================================================
-
-  const latestServices = useMemo(() =>
-    [...filtered]
-      .sort((a, b) =>
-        new Date(b.created_at || 0) - new Date(a.created_at || 0)
-      )
-      .slice(0, 6),
-  [filtered]);
-
-  // ==========================================================
   // PAGINATION
   // ==========================================================
 
@@ -612,27 +600,18 @@ export default function Laporan() {
                 {trendData.length ? (
                   <div className="h-[260px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={trendData}>
-                        <defs>
-                          <linearGradient id="reportGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#981611" stopOpacity={0.25} />
-                            <stop offset="100%" stopColor="#981611" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-
+                      <BarChart data={trendData} barCategoryGap="30%">
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                         <XAxis dataKey="bulan" tick={{ fontSize: 10 }} />
                         <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                         <Tooltip />
-                        <Area
-                          type="monotone"
+                        <Bar
                           dataKey="total"
                           name="Total Layanan"
-                          stroke="#981611"
-                          strokeWidth={2}
-                          fill="url(#reportGradient)"
+                          fill="#981611"
+                          radius={[4, 4, 0, 0]}
                         />
-                      </AreaChart>
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 ) : (
@@ -820,58 +799,6 @@ export default function Laporan() {
                     <ChevronRight size={14} />
                   </button>
                 </div>
-              </div>
-            </Panel>
-
-            {/* LAYANAN TERBARU */}
-
-            <Panel>
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-bold text-slate-800">
-                    Data Layanan Terbaru
-                  </h2>
-                  <p className="mt-1 text-[10px] text-slate-400">
-                    Berdasarkan tanggal pembuatan data
-                  </p>
-                </div>
-                <FileText size={18} className="text-slate-400" />
-              </div>
-
-              <div className="divide-y divide-slate-100">
-                {latestServices.map(item => {
-                  const type = getStatus(item.status);
-
-                  const badge = {
-                    aktif: "bg-green-50 text-green-700",
-                    update: "bg-blue-50 text-blue-700",
-                    kendala: "bg-red-50 text-red-700",
-                  }[type];
-
-                  return (
-                    <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-slate-800">
-                          {item.kode_layanan || `LAY-${item.id}`} · {item.nama_layanan}
-                        </p>
-                        <p className="mt-1 text-[10px] text-slate-500">
-                          {item.instansi?.nama_instansi || "Tanpa Instansi"}
-                        </p>
-                        <p className="mt-1 text-[10px] text-slate-400">
-                          {formatDate(item.created_at)}
-                        </p>
-                      </div>
-
-                      <span className={`rounded px-2 py-1 text-[10px] font-semibold ${badge}`}>
-                        {item.status || "Tidak diketahui"}
-                      </span>
-                    </div>
-                  );
-                })}
-
-                {!latestServices.length && (
-                  <EmptyState message="Belum ada layanan pada filter ini." />
-                )}
               </div>
             </Panel>
           </>

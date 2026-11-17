@@ -24,6 +24,7 @@ import {
 import Topbar from "../components/Topbar";
 import Breadcrumb from "../components/Breadcrumb";
 import Pagination from "../components/Pagination";
+import RedSelect from "../components/RedSelect";
 
 import {
   apiRequest,
@@ -41,6 +42,11 @@ export default function KataKunci() {
   // ==========================================================
   // DATA
   // ==========================================================
+
+  const [
+    wilayahList,
+    setWilayahList,
+  ] = useState([]);
 
   const [
     rows,
@@ -68,6 +74,15 @@ export default function KataKunci() {
   const [
     search,
     setSearch,
+  ] = useState("");
+
+  // ==========================================================
+  // FILTER WILAYAH
+  // ==========================================================
+
+  const [
+    wilayah,
+    setWilayah,
   ] = useState("");
 
   // ==========================================================
@@ -113,18 +128,30 @@ export default function KataKunci() {
   ] = useState(false);
 
   // ==========================================================
+  // LOAD WILAYAH
+  // ==========================================================
+
+  async function loadWilayah() {
+    try {
+      const result = await apiRequest("/wilayah");
+      setWilayahList(result?.data || []);
+    } catch (err) {
+      console.error("Gagal mengambil wilayah:", err);
+    }
+  }
+
+  // ==========================================================
   // LOAD SUMMARY
   // ==========================================================
 
   async function loadSummary() {
-
     try {
-
-      const result =
-        await apiRequest(
-          "/layanan-keyword/summary"
-        );
-
+      const params = new URLSearchParams();
+      if (wilayah) {
+        params.set("wilayah", wilayah);
+      }
+      const q = params.toString() ? `?${params.toString()}` : "";
+      const result = await apiRequest(`/layanan-keyword/summary${q}`);
       setSummary(
         result?.data || {
           total_keyword: 0,
@@ -133,13 +160,8 @@ export default function KataKunci() {
           layanan_punya_keyword: 0,
         }
       );
-
     } catch (err) {
-
-      console.error(
-        "Gagal mengambil summary keyword:",
-        err
-      );
+      console.error("Gagal mengambil summary keyword:", err);
     }
   }
 
@@ -181,14 +203,19 @@ export default function KataKunci() {
         );
       }
 
+      if (wilayah) {
+        params.set("wilayah", wilayah);
+      }
+
       const result =
         await apiRequest(
           `/layanan-keyword?${params.toString()}`
         );
 
-      setRows(
-        result?.data || []
-      );
+      const fetched =
+        result?.data || [];
+
+      setRows(fetched);
 
       if (
         result?.pagination
@@ -220,23 +247,21 @@ export default function KataKunci() {
   // ==========================================================
 
   useEffect(() => {
-
-    loadSummary();
-
+    loadWilayah();
   }, []);
 
   // ==========================================================
-  // DATA
+  // DATA — re-fetch saat page / limit / search / wilayah berubah
   // ==========================================================
 
   useEffect(() => {
-
     loadData();
-
+    loadSummary();
   }, [
     pagination.page,
     pagination.limit,
     search,
+    wilayah,
   ]);
 
   // ==========================================================
@@ -249,6 +274,26 @@ export default function KataKunci() {
 
     setSearch(
       e.target.value
+    );
+
+    setPagination(
+      (current) => ({
+        ...current,
+        page: 1,
+      })
+    );
+  }
+
+  // ==========================================================
+  // FILTER WILAYAH
+  // ==========================================================
+
+  function handleWilayah(
+    value
+  ) {
+
+    setWilayah(
+      value
     );
 
     setPagination(
@@ -620,21 +665,27 @@ export default function KataKunci() {
           </div>
 
           {/* =================================================
-              SEARCH
+              FILTER
           ================================================== */}
 
           <div
             className="
+              flex
+              flex-wrap
+              items-center
+              gap-2
               px-6
               py-4
             "
           >
 
+            {/* SEARCH */}
+
             <label
               className="
                 relative
-                block
-                max-w-xl
+                min-w-[250px]
+                flex-1
               "
             >
 
@@ -667,7 +718,7 @@ export default function KataKunci() {
                   border
                   border-slate-300
                   bg-slate-50
-                  py-2.5
+                  py-2
                   pl-9
                   pr-3
                   text-xs
@@ -680,6 +731,20 @@ export default function KataKunci() {
               />
 
             </label>
+
+            {/* WILAYAH */}
+
+            <RedSelect
+              value={wilayah}
+              onChange={handleWilayah}
+              options={[
+                { value: "", label: "Semua Wilayah" },
+                ...wilayahList.map((item) => ({
+                  value: item.nama,
+                  label: item.nama,
+                })),
+              ]}
+            />
 
           </div>
 

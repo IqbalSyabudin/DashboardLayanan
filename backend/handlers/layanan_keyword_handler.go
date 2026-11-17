@@ -159,6 +159,8 @@ func (h *LayananKeywordHandler) baseKeywordQuery() *gorm.DB {
 
 func (h *LayananKeywordHandler) GetLayananKeyword(c *gin.Context) {
 	search := strings.TrimSpace(c.Query("search"))
+	wilayah := strings.TrimSpace(c.Query("wilayah"))
+	wilayahID := strings.TrimSpace(c.Query("wilayah_id"))
 
 	keywordOnly := strings.EqualFold(
 		strings.TrimSpace(c.Query("keyword_only")),
@@ -207,6 +209,12 @@ func (h *LayananKeywordHandler) GetLayananKeyword(c *gin.Context) {
 				pattern,
 			)
 		}
+	}
+
+	if wilayahID != "" {
+		query = query.Where("i.wilayah_id = ?", wilayahID)
+	} else if wilayah != "" {
+		query = query.Where("w.nama ILIKE ?", "%"+wilayah+"%")
 	}
 
 	var total int64
@@ -275,6 +283,15 @@ func (h *LayananKeywordHandler) GetLayananKeywordSummary(c *gin.Context) {
 		h.baseKeywordQuery(),
 		c,
 	)
+
+	wilayah := strings.TrimSpace(c.Query("wilayah"))
+	wilayahID := strings.TrimSpace(c.Query("wilayah_id"))
+
+	if wilayahID != "" {
+		query = query.Where("i.wilayah_id = ?", wilayahID)
+	} else if wilayah != "" {
+		query = query.Where("w.nama ILIKE ?", "%"+wilayah+"%")
+	}
 
 	err := query.
 		Select(`
