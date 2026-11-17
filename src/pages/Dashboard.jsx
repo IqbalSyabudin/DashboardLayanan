@@ -1,9 +1,9 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Building2, Layers, CheckCircle2, RefreshCw, ShieldCheck,
-  FilePlus, Search, Activity, AlertTriangle, Database, ChevronRight,
+  Activity, AlertTriangle, Database, ChevronRight,
 } from "lucide-react";
 import {
   Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip,
@@ -12,9 +12,7 @@ import {
 
 import Topbar from "../components/Topbar";
 import StatCard from "../components/StatCard";
-import LayananTable from "../components/LayananTable";
 import ServiceRegionChart from "../components/ServiceRegionChart";
-import RedSelect from "../components/RedSelect";
 import { apiRequest } from "../services/api";
 
 import {
@@ -60,12 +58,14 @@ const EmptyChart = ({ message }) => (
 // KARTU WILAYAH
 // ============================================================
 
-function RegionCards({ data, onSelect, selected }) {
+function RegionCards({ data }) {
+  const navigate = useNavigate();
+
   return (
     <Panel>
       <PanelHeader
         title="Total Layanan per Daerah (Hierarki Pemerintahan & Wilayah)"
-        subtitle="Klik kartu daerah untuk melihat layanan berdasarkan wilayah"
+        subtitle="Klik salah satu daerah untuk melihat daftar layanannya di halaman Data Layanan"
         right={
           <span className="rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-[10px] font-semibold text-red-700">
             {data.length} Daerah Terdata
@@ -77,24 +77,30 @@ function RegionCards({ data, onSelect, selected }) {
         {data.map(region => (
           <button
             key={region.id}
-            onClick={() => onSelect(region.nama)}
-            className={`min-w-0 rounded-lg border p-2.5 text-left transition hover:border-red-300 hover:shadow-sm ${
-              selected === region.nama ? "border-red-400 bg-red-50" : "border-slate-200"
-            }`}
+            type="button"
+            onClick={() =>
+              navigate(`/data-layanan?wilayah=${encodeURIComponent(region.nama)}`)
+            }
+            className="group min-w-0 rounded-lg border border-slate-200 p-2.5 text-left transition hover:border-red-400 hover:bg-red-50/50 hover:shadow-sm cursor-pointer"
+            title={`Lihat layanan untuk ${region.nama}`}
           >
-            <div className="flex justify-between gap-1">
-              <span className="text-[10px] font-bold text-slate-600">{region.code}</span>
-              <span className="flex items-center text-[8px] text-slate-400">
-                Detail <ChevronRight size={10} />
+            <div className="flex justify-between items-center gap-1">
+              <span className="text-[10px] font-bold text-slate-600 group-hover:text-red-700 transition">
+                {region.code}
+              </span>
+              <span className="flex items-center gap-0.5 text-[8px] text-slate-400 group-hover:text-red-600 transition">
+                Lihat <ChevronRight size={10} />
               </span>
             </div>
 
             <div className="mt-2 flex items-baseline gap-1.5">
-              <strong className="text-xl leading-none text-slate-800">{region.total}</strong>
+              <strong className="text-xl leading-none text-slate-800 group-hover:text-red-700 transition">
+                {region.total}
+              </strong>
               <span className="text-[9px] text-slate-400">Layanan</span>
             </div>
 
-            <p className="mt-2 truncate text-[9px] font-semibold text-slate-600">
+            <p className="mt-2 truncate text-[9px] font-semibold text-slate-600 group-hover:text-slate-800 transition">
               {region.label}
             </p>
 
@@ -307,10 +313,6 @@ function ActivityPanel({ data }) {
 // ============================================================
 
 export default function Dashboard() {
-  const [wilayah, setWilayah] = useState("");
-  const [status, setStatus] = useState("");
-  const [search, setSearch] = useState("");
-
   const [rawServices, setRawServices] = useState([]);
   const [wilayahList, setWilayahList] = useState([]);
   const [instansiSummary, setInstansiSummary] = useState({});
@@ -334,27 +336,32 @@ export default function Dashboard() {
           apiRequest("/layanan-status/summary"),
         ]);
 
-        if (!Array.isArray(first?.data)) {
-          throw new Error("Format data layanan dari API tidak valid.");
+        if (cancelled) return;
+
+        if (Array.isArray(first?.data)) {
+          setRawServices(first.data);
         }
+        if (regions?.data) setWilayahList(regions.data);
+        if (instansi?.data) setInstansiSummary(instansi.data);
+        if (statusData?.data) setStatusSummary(statusData.data);
+        setLoading(false);
 
         const pages = Number(first?.pagination?.total_pages || 1);
 
-        const remaining = await Promise.all(
-          Array.from({ length: Math.max(0, pages - 1) }, (_, i) =>
-            apiRequest(`/layanan?page=${i + 2}&limit=100`)
-          )
-        );
+        if (pages > 1) {
+          const remaining = await Promise.all(
+            Array.from({ length: pages - 1 }, (_, i) =>
+              apiRequest(`/layanan?page=${i + 2}&limit=100`)
+            )
+          );
 
-        if (cancelled) return;
-
-        setRawServices([
-          ...first.data,
-          ...remaining.flatMap(result => result?.data || []),
-        ]);
-        setWilayahList(regions?.data || []);
-        setInstansiSummary(instansi?.data || {});
-        setStatusSummary(statusData?.data || {});
+          if (!cancelled) {
+            setRawServices([
+              ...(first?.data || []),
+              ...remaining.flatMap(result => result?.data || []),
+            ]);
+          }
+        }
       } catch (err) {
         console.error("Gagal memuat Dashboard:", err);
         if (!cancelled) setError(err.message || "Gagal mengambil data API.");
@@ -418,32 +425,6 @@ export default function Dashboard() {
     [rawServices]
   );
 
-  const wilayahOptions = useMemo(() => [
-    { value: "", label: "Semua Wilayah" },
-    ...wilayahList.map(x => ({ value: x.nama, label: x.nama })),
-  ], [wilayahList]);
-
-  const statusOptions = [
-    { value: "", label: "Semua Status" },
-    { value: "Aktif", label: "Aktif" },
-    { value: "Perlu Update", label: "Perlu Update" },
-    { value: "Non aktif", label: "Non aktif" },
-  ];
-
-  // FILTER TABEL
-  const filtered = useMemo(() => {
-    const keyword = search.toLowerCase().trim();
-
-    return layananData.filter(item => {
-      const matchWilayah = !wilayah || item.wilayah === wilayah;
-      const matchStatus = !status || item.status.toLowerCase() === status.toLowerCase();
-      const matchSearch = !keyword || [item.layanan, item.dinas, item.wilayah]
-        .some(value => value.toLowerCase().includes(keyword));
-
-      return matchWilayah && matchStatus && matchSearch;
-    });
-  }, [layananData, wilayah, status, search]);
-
   return (
     <>
       <Topbar title="Dashboard" subtitle="Layanan Informasi Publik" />
@@ -462,10 +443,17 @@ export default function Dashboard() {
                 Informasi statistik yang diambil langsung dari database melalui API
               </p>
             </div>
-            <span className="rounded-md bg-green-50 px-3 py-1.5 text-[10px] font-semibold text-green-700">
-              <CheckCircle2 size={11} className="mr-1 inline" />
-              Terhubung
-            </span>
+            {loading ? (
+              <span className="flex items-center gap-1.5 rounded-md bg-amber-50 px-3 py-1.5 text-[10px] font-semibold text-amber-700">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                Sinkronisasi data...
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 rounded-md bg-green-50 px-3 py-1.5 text-[10px] font-semibold text-green-700">
+                <CheckCircle2 size={11} className="mr-1 inline text-green-600" />
+                Terhubung
+              </span>
+            )}
           </div>
         </Panel>
 
@@ -473,102 +461,38 @@ export default function Dashboard() {
           <div className="flex gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
             <AlertTriangle size={18} className="shrink-0 text-red-600" />
             <div>
-              <p className="text-xs font-bold text-red-700">Gagal memuat Dashboard</p>
+              <p className="text-xs font-bold text-red-700">Gagal memuat sebagian data</p>
               <p className="mt-1 text-xs text-red-600">{error}</p>
             </div>
           </div>
         )}
 
-        {loading ? (
-          <div className="flex min-h-64 items-center justify-center" role="status">
-            <span className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-brand-600" />
-          </div>
-        ) : !error && (
-          <>
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-              {stats.map(item => <StatCard key={item.label} {...item} />)}
-            </section>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+          {stats.map(item => <StatCard key={item.label} {...item} />)}
+        </section>
 
-            <RegionCards
-              data={regionStats}
-              selected={wilayah}
-              onSelect={value => { setWilayah(value); setSearch(""); }}
-            />
+        <RegionCards data={regionStats} />
 
-            <MonitoringCharts
-              data={monitoringData}
-              totalQueries={totalQueries}
-              success={success}
-              failed={failed}
-            />
+        <MonitoringCharts
+          data={monitoringData}
+          totalQueries={totalQueries}
+          success={success}
+          failed={failed}
+        />
 
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <CategoryPanel data={categoryData} />
-              <ConfidencePanel value={confidence} count={monitoringRecords.length} />
-              <ActivityPanel data={activities} />
-            </section>
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <CategoryPanel data={categoryData} />
+          <ConfidencePanel value={confidence} count={monitoringRecords.length} />
+          <ActivityPanel data={activities} />
+        </section>
 
-            <Panel>
-              <PanelHeader
-                title="STATISTIK LAYANAN PER WILAYAH"
-                subtitle="Perbandingan layanan aktif dan layanan yang mengalami kendala"
-              />
-              <ServiceRegionChart data={regionStats} />
-            </Panel>
-
-            <Panel className="p-0">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-700">
-                    Daftar Layanan Informasi Publik
-                  </h2>
-                  <p className="mt-1 text-[10px] text-slate-400">
-                    Data layanan yang tersimpan pada database
-                  </p>
-                </div>
-                <Link to="/data-layanan" className="text-xs font-semibold text-brand-600 hover:underline">
-                  Kelola Semua →
-                </Link>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-4">
-                <RedSelect value={wilayah} onChange={setWilayah} options={wilayahOptions} />
-                <RedSelect value={status} onChange={setStatus} options={statusOptions} />
-
-                <label className="relative min-w-[180px] flex-1">
-                  <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Cari nama dinas, layanan..."
-                    className="w-full rounded-lg border border-slate-300 py-2 pl-8 pr-3 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-400"
-                  />
-                </label>
-
-                {(wilayah || status || search) && (
-                  <button
-                    onClick={() => { setWilayah(""); setStatus(""); setSearch(""); }}
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50"
-                  >
-                    Reset Filter
-                  </button>
-                )}
-              </div>
-
-              <div className="p-4">
-                <p className="mb-3 text-[10px] text-slate-400">
-                  Menampilkan {filtered.length} layanan
-                  {wilayah && ` — ${wilayah}`}
-                </p>
-                <LayananTable
-                  key={`${wilayah}|${status}|${search}`}
-                  data={filtered}
-                  pageSize={6}
-                />
-              </div>
-            </Panel>
-          </>
-        )}
+        <Panel>
+          <PanelHeader
+            title="STATISTIK LAYANAN PER WILAYAH"
+            subtitle="Perbandingan layanan aktif dan layanan yang mengalami kendala"
+          />
+          <ServiceRegionChart data={regionStats} />
+        </Panel>
       </main>
     </>
   );
