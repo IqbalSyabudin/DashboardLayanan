@@ -12,8 +12,6 @@ import {
 
 import {
   Search,
-  Moon,
-  Bell,
   ChevronDown,
   LogOut,
 } from "lucide-react";
@@ -401,61 +399,7 @@ export default function Topbar({
 
         </form>
 
-        {/* ==================================================
-            DARK MODE
-        =================================================== */}
 
-        <button
-          type="button"
-          className="
-            text-slate-500
-            hover:text-slate-700
-            transition
-          "
-          title="Mode gelap"
-        >
-          <Moon size={21} />
-        </button>
-
-        {/* ==================================================
-            NOTIFICATION
-        =================================================== */}
-
-        <button
-          type="button"
-          className="
-            relative
-            text-slate-500
-            hover:text-slate-700
-            transition
-          "
-          title="Notifikasi"
-        >
-
-          <Bell size={21} />
-
-          <span
-            className="
-              absolute
-              -right-2
-              -top-2
-              flex
-              h-5
-              min-w-5
-              items-center
-              justify-center
-              rounded-full
-              bg-red-500
-              px-1
-              text-[10px]
-              font-bold
-              text-white
-            "
-          >
-            5
-          </span>
-
-        </button>
 
         {/* ==================================================
             USER MENU
