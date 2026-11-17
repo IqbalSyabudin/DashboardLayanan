@@ -1,4 +1,3 @@
-
 import { NavLink } from "react-router-dom";
 import {
   Home,
@@ -11,11 +10,9 @@ import {
   Users,
   Settings,
   ChevronRight,
-  ChevronDown,
 } from "lucide-react";
 
 import Logo from "./Logo";
-import Avatar from "./Avatar";
 import sidebarBg from "../assets/SidebarBG.png";
 
 const NAV_ITEMS = [
@@ -30,24 +27,7 @@ const NAV_ITEMS = [
   { to: "/pengaturan", label: "Pengaturan", icon: Settings, hasSubmenu: true },
 ];
 
-const ROLE_LABELS = {
-  super_admin: "Super Admin",
-  admin_pemkot: "Admin Pemkot",
-  admin_pemkab: "Admin Pemkab",
-};
-
 export default function Sidebar() {
-  let user = null;
-
-  try {
-    user = JSON.parse(localStorage.getItem("user") || "null");
-  } catch {
-    user = null;
-  }
-
-  const username = user?.username || "Pengguna";
-  const role = ROLE_LABELS[user?.role] || "Admin";
-  
   return (
     <aside
       className="hidden lg:flex flex-col w-[280px] shrink-0 h-screen sticky top-0 bg-[#9F1D1D] text-white overflow-hidden bg-cover bg-center bg-no-repeat"
@@ -110,33 +90,6 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
-
-      {/* Bottom Profile */}
-      <div className="shrink-0 p-3 border-t border-[#991B1B]">
-        <div className="flex items-center gap-3 rounded-[8px] px-3 py-2">
-          <Avatar
-            name={username}
-            size={38}
-            bg="bg-[#FCA5A5]"
-            textColor="text-[#981611]"
-          />
-
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">
-              {username}
-            </p>
-
-            <p className="text-xs text-[#FECACA] truncate">
-              {role}
-            </p>
-          </div>
-
-          <ChevronDown
-            size={14}
-            className="text-[#FCA5A5] shrink-0"
-          />
-        </div>
-      </div>
     </aside>
   );
 }
