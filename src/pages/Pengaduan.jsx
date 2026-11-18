@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import Topbar from "../components/Topbar";
+import RedSelect from "../components/RedSelect";
 import { apiRequest } from "../services/api";
 
 // ============================================================
@@ -29,6 +30,49 @@ const STATUS_OPTIONS = [
   { value: "selesai", label: "Selesai" },
   { value: "ditolak", label: "Ditolak" },
 ];
+
+// Opsi status penanganan berdasarkan role login:
+// - Super Admin  : hanya Selesai & Ditolak
+// - Admin wilayah (pemkot / pemkab) : hanya Menunggu Verifikasi & Diproses OPD
+const STATUS_FORM_OPTIONS = [
+  { value: "menunggu_verifikasi", label: "Menunggu Verifikasi" },
+  { value: "diproses_opd", label: "Diproses OPD" },
+  { value: "selesai", label: "Selesai" },
+  { value: "ditolak", label: "Ditolak" },
+];
+
+const STATUS_BY_ROLE = {
+  super_admin: ["selesai", "ditolak"],
+  admin_pemkot: ["menunggu_verifikasi", "diproses_opd"],
+  admin_pemkab: ["menunggu_verifikasi", "diproses_opd"],
+};
+
+function getCurrentRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    return String(user?.role || "").trim().toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function getAllowedStatusValues(role) {
+  // role tidak dikenal -> perlakukan sebagai admin wilayah (paling terbatas)
+  return STATUS_BY_ROLE[role] || STATUS_BY_ROLE.admin_pemkot;
+}
+
+// Daftar opsi dropdown sesuai role. Jika status aduan saat ini di luar
+// jatah role (mis. admin wilayah membuka aduan berstatus "Selesai"),
+// status itu tetap ditampilkan agar tampilan dropdown tidak keliru.
+function buildStatusOptions(role, currentValue) {
+  const allowed = getAllowedStatusValues(role);
+  const opts = STATUS_FORM_OPTIONS.filter((o) => allowed.includes(o.value));
+  if (currentValue && !allowed.includes(currentValue)) {
+    const cur = STATUS_FORM_OPTIONS.find((o) => o.value === currentValue);
+    if (cur) opts.unshift({ value: cur.value, label: `${cur.label} (status saat ini)` });
+  }
+  return opts;
+}
 
 const STATUS_BADGE = {
   menunggu_verifikasi: {
@@ -60,6 +104,10 @@ const inputClass = `
   focus:ring-2 focus:ring-red-100
   transition bg-white
 `;
+
+// Tampilan tombol RedSelect agar setara dengan input form (text-sm, tinggi sama)
+const SELECT_FORM_LOOK =
+  "bg-white px-3 py-2 text-sm font-normal text-slate-700";
 
 const inputReadOnly = `
   w-full rounded-lg border border-slate-200
@@ -141,6 +189,8 @@ function StatusBadge({ status }) {
 // ============================================================
 
 export default function Pengaduan() {
+  const role = getCurrentRole();
+
   // State data & stats
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState({
@@ -376,7 +426,7 @@ export default function Pengaduan() {
       opd_tujuan: "Disdukcapil",
       judul_pengaduan: "",
       isi_laporan_warga: "",
-      status: "menunggu_verifikasi",
+      status: getAllowedStatusValues(role)[0],
       tanggapan_admin: "",
     });
     setShowCatatModal(true);
@@ -1154,21 +1204,14 @@ export default function Pengaduan() {
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Status Penanganan Admin PPID
               </label>
-              <select
-                value={tindakLanjutData.status || "menunggu_verifikasi"}
-                onChange={(e) =>
-                  setTindakLanjutData((prev) => ({
-                    ...prev,
-                    status: e.target.value,
-                  }))
+              <RedSelect
+                value={tindakLanjutData.status}
+                onChange={(val) =>
+                  setTindakLanjutData((prev) => ({ ...prev, status: val }))
                 }
-                className={inputClass}
-              >
-                <option value="menunggu_verifikasi">Menunggu Verifikasi</option>
-                <option value="diproses_opd">Diproses OPD</option>
-                <option value="selesai">Selesai</option>
-                <option value="ditolak">Ditolak</option>
-              </select>
+                options={buildStatusOptions(role, tindakLanjutData.status)}
+                buttonClassName={SELECT_FORM_LOOK}
+              />
             </div>
 
             <div className="mb-6">
@@ -1341,21 +1384,14 @@ export default function Pengaduan() {
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Status Penanganan Admin PPID
             </label>
-            <select
+            <RedSelect
               value={catatForm.status}
-              onChange={(e) =>
-                setCatatForm((prev) => ({
-                  ...prev,
-                  status: e.target.value,
-                }))
+              onChange={(val) =>
+                setCatatForm((prev) => ({ ...prev, status: val }))
               }
-              className={inputClass}
-            >
-              <option value="menunggu_verifikasi">Menunggu Verifikasi</option>
-              <option value="diproses_opd">Diproses OPD</option>
-              <option value="selesai">Selesai</option>
-              <option value="ditolak">Ditolak</option>
-            </select>
+              options={buildStatusOptions(role, catatForm.status)}
+              buttonClassName={SELECT_FORM_LOOK}
+            />
           </div>
 
           <div className="mb-6">
